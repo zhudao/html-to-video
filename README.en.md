@@ -6,10 +6,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](package.json)
 
+**[Live preview · wx4766.github.io/html-to-video](https://wx4766.github.io/html-to-video/)** — see the output before cloning anything
+
 [![10-second demo: HTML in, MP4 out — this clip is itself one HTML file, rendered](docs/demo-hero.gif)](docs/demo-hero.mp4)
 
 <sub>That clip is [`docs/demo-hero.html`](docs/demo-hero.html) — 447 lines, zero dependencies. Reproduce it:<br>
 `node scripts/render-video-seek.js docs/demo-hero.html --duration=10 --fps=60`</sub>
+
+[![](docs/demo-multiratio-cover.jpg)](docs/demo-multiratio.mp4)
+
+<sub>**One HTML file, one command, every platform format.** Those three frames are real
+renders (1920×1080 / 1080×1440 / 1080×1920), not mockups: `--presets=douyin,xiaohongshu,youtube`.</sub>
 
 **Render an HTML/Canvas animation to MP4, frame by frame.**
 
@@ -167,6 +174,10 @@ dist/chart-douyin.mp4       1080×1920   TikTok / Reels / Shorts
 dist/chart-xiaohongshu.mp4  1080×1440   Xiaohongshu 3:4
 dist/chart-square.mp4       1080×1080   Square 1:1
 ```
+
+[![](docs/demo-multiratio.gif)](docs/demo-multiratio.mp4)
+
+<sub>Same file, same timestamp, three viewports. Only the layout changes — not a word of content.</sub>
 
 | Preset | Size | For |
 |---|---|---|
