@@ -6,17 +6,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](package.json)
 
-**[在线预览 · wx4766.github.io/html-to-video](https://wx4766.github.io/html-to-video/)** —— 不用 clone，先看效果
-
 [![10 秒演示：HTML in，MP4 out —— 这段片子本身就是一份 HTML 文件渲出来的](docs/demo-hero.gif)](docs/demo-hero.mp4)
 
 <sub>这段片子就是 [`docs/demo-hero.html`](docs/demo-hero.html)（447 行、零依赖）渲出来的。自己复现一遍：<br>
 `node scripts/render-video-seek.js docs/demo-hero.html --duration=10 --fps=60`</sub>
-
-[![](docs/demo-multiratio-cover.jpg)](docs/demo-multiratio.mp4)
-
-<sub>**同一份 HTML，一条命令出全套平台比例。** 三个画面是真实渲染输出（1920×1080 / 1080×1440 / 1080×1920），
-不是示意图：`--presets=douyin,xiaohongshu,youtube`。</sub>
 
 把 HTML / Canvas 动画**逐帧渲染成 MP4**（可配乐、可出 GIF）。
 
@@ -40,7 +33,7 @@
 | **零费用** | 本地跑，不调任何 API |
 | **有质量门** | 内置自动化验收：确定性、卡顿、跳变、半截字、叠字、字幕带、字体回退 |
 | **开箱即用** | 11 个模板改个配置块就出片，不用从零学 canvas |
-| **横竖屏都行** | 模板跟视口自适应；`--presets=douyin,xiaohongshu,youtube` 一条命令出全套比例，不裁切 |
+| **横竖屏都行** | 模板跟视口自适应，16:9 / 9:16 换 `--width/--height` 即可，不裁切 |
 | **能出「一支片子」** | 多镜头 + 8 种转场 + 持续运镜，一个 HTML 出整支，不用渲几段再拼 |
 | **自带素材** | 40+ 图标 / 参数化人物 / 卡片箭头 / 背景纹理，纯代码零依赖零版权风险 |
 | **能叠能配** | `--alpha` 出透明层叠到实拍上；`--srt` 挂外部字幕时间轴 |
@@ -81,7 +74,7 @@
 于是闭环是：LLM 写 JSON/HTML → 渲 → QA 自己判红绿 → 红了就照着报告改 → 再渲。
 人只在最后看一眼成片。
 
-## 11 个开箱即用模板
+## 14 个开箱即用模板
 
 拷贝一个，改顶部 `CFG` 里的文案和数据，直接出片。
 
@@ -98,6 +91,9 @@
 | [![](docs/demo-subtitle-card.gif)](docs/demo-subtitle-card.mp4) | `assets/templates/subtitle-card.html` | **逐句解说卡**：一句话一句地出 + 分段进度条，可挂 SRT |
 | [<img src="docs/demo-vertical-card.gif" width="150" alt="竖屏卡">](docs/demo-vertical-card.mp4) | `assets/templates/vertical-card.html` | **竖屏 9:16 卡**：大字标题 + 大数字，抖音 / 视频号 / Reels 用 |
 | [<img src="docs/demo-vertical-subtitle.gif" width="150" alt="竖屏字幕卡">](docs/demo-vertical-subtitle.mp4) | `assets/templates/vertical-subtitle.html` | **竖屏字幕卡**：`**关键词**` 自动高亮，原生 9:16 版式 |
+| [<img src="docs/img/preview-quote-card.jpg" width="150" alt="引言卡">](docs/img/preview-quote-card.jpg) | `assets/templates/quote-card.html` | **引言卡 / 金句**：大引号压底 + 引文逐行推进 + 出处短线，访谈 / 书摘 / 播客切片用 |
+| [<img src="docs/img/preview-chapter-card.jpg" width="150" alt="章节卡">](docs/img/preview-chapter-card.jpg) | `assets/templates/chapter-card.html` | **章节卡 / 过渡页**：序号水印 + 标题 + 章节进度点，把长片切成几段 |
+| [<img src="docs/img/preview-ui-showcase.jpg" width="150" alt="界面演示">](docs/img/preview-ui-showcase.jpg) | `assets/templates/ui-showcase.html` | **界面演示**：窗口推入 + 缓推 + 两块聚光标注，产品发布 / 功能更新用；也可换成真实截图 |
 
 > 动图只为让你看见「它在动」；**点动图打开原片**看真实画质（横屏 1080p，竖屏 1080×1920）。
 > 静帧大图在 `docs/preview-*.png`。
@@ -133,10 +129,6 @@ bash assets/render.sh title-card.html --duration=6 --fps=60 --width=1280 --heigh
 bash assets/render.sh bar-chart.html --duration=8 \
   --presets=douyin,xiaohongshu,square --out=dist/chart.mp4
 ```
-
-[![](docs/demo-multiratio.gif)](docs/demo-multiratio.mp4)
-
-<sub>三个画面同源同帧，只是视口不同 —— 版式跟着变，内容一个字没改。</sub>
 
 ```text
 dist/chart-douyin.mp4       1080×1920   抖音 / 快手 / 视频号
@@ -177,6 +169,34 @@ bash assets/render.sh title-card.html --audio=voice.m4a --story=shots.json
 一个必须说清的边界：`trim` 下成片**不会精确等于音频秒数**。视频流是 `-c:v copy`
 直接复制的，ffmpeg 只能按帧包边界收尾，实测会多留 0.3–0.5s。毫秒级对齐得重编码，
 那是拿画质换精度，不值得。
+
+### 卡点：让切点落在拍上
+
+所有"看着专业"的片子都遵守同一条潜规则：**切点落在拍上**。
+手工对齐是数着秒表挪关键帧，改一句文案又得重来。把拍点算出来交给程序，
+"卡点"就从手感变成了参数：
+
+```bash
+bash assets/render.sh style-film.html --audio=bgm.mp3 --beats --snap=beats
+# ▸ 节拍: 120.14 BPM · 20 个拍点 · 首拍 0.49s · 置信度 0.85
+# ▸ 时长对齐拍点: 25.2s → 25.5s（+0.3s）
+```
+
+- `--beats` 直接分析 `--audio` 那条音轨；`--beats=beats.json` 用预先算好的网格
+  （同一个 BGM 出多条片子时别反复分析）。
+- `--snap=beats` 把总时长吸到下一个拍点 —— 成片不会"差 0.2 秒收在半个拍上"。
+- `--snap-shots` 把**每个镜头**的时长量化到整拍，这才是"切点真的落在拍上"。
+  改动会逐条打印（`3.60s → 3.50s`），幅度超过 25% 会警告 —— 节奏变了得让你知道。
+- 模板里也能吃到拍点：`window.__beats` 有 `bpm / beats / downbeats / offset`，
+  风格库提供 `SV.pulse(t)`（拍点处为 1、之后衰减）和 `SV.beatPhase(t)`。
+
+分析器是零依赖的（`scripts/beats.js`）：ffmpeg 解成 22.05kHz 单声道 →
+对数能量通量 → 自相关估周期 → 扫相位。实测 120BPM 鼓点误差 < 2BPM、相位误差 ~9ms；
+纯人声测不出稳定 BPM 时会明确报警（旁白本来就该按句子切，不该按拍切）。
+
+```bash
+node scripts/beats.js bgm.mp3 --out=beats.json     # 单独跑，看 BPM 与置信度
+```
 
 ### 给 Agent 用：`--json`
 
@@ -328,6 +348,86 @@ node scripts/render-video-seek.js subtitle-card.html --duration=8 --srt=voice.sr
 
 > 底部 15% 是各平台进度条 / 按钮区，字幕踩进去等于白写；`qa.js` 会提示「进字幕带」。
 
+## 12 种风格：同样的内容，换个样子
+
+模板解决「这段内容怎么排」，风格解决「这支片长什么样」。两者分开之后，
+14 个版式 × 12 种视觉语言 = 168 种观感，而不用写 168 个模板。
+
+```bash
+bash assets/render.sh assets/style-film.html --duration=13 --theme=chalk     # 黑板粉笔
+bash assets/render.sh assets/style-film.html --duration=13 --theme=水墨 --width=1080 --height=1920
+```
+
+| 风格 | 一句话 | 适合 |
+|---|---|---|
+| `riso` 孔版印刷 | 米白纸 + 荧光粉/蓝/绿三套网点（真实印刷网角）+ 标题套印错位 | 观点、数据、独立杂志感 |
+| `cutpaper` 剪纸拼贴 | 四边手撕的纸片 + 锐利硬投影 + 两层纸叠着 | 故事、人物、教育 |
+| `blueprint` 工程蓝图 | 深蓝 + 20/100px 双层格网 + 四角十字定位标记 + 等宽字 | 技术、架构、API |
+| `chalk` 黑板粉笔 | 墨绿板 + 双线抖动笔触 + 粉尘 + 楷体 | 教学、科普 |
+| `isometric` 等距线稿 | 白底 + 2:1 等距立体块（顶面/左面/右面）+ 白面遮挡 | 机制、结构、流程 |
+| `synthwave` 霓虹复古 | 条纹太阳 + 透视地面网格 + CRT 扫描线 + 色差 | 音乐、游戏、复古科技 |
+| `swiss` 瑞士网格 | 白底 + 超大字号 + 单一信号红 + 零圆角 | 品牌、观点、发布会 |
+| `ink` 水墨宣纸 | 宣纸纤维 + 三层洇墨 + 朱红印章色 + 大留白 | 国风、文化、历史 |
+| `watercolor` 水彩晕染 | 棉浆纸 + 湿画法色晕 + 颜料在边缘沉积的深圈 + 衬线标题 | 人文叙事、品牌故事、教育 |
+| `pencil` 铅笔素描 | 素描纸 + 45° 排线 + 双线手绘边框 + 石墨灰阶（几乎不用彩色） | 教程、拆解、草稿感 |
+| `vox` 半调解说 | 奶油底 + 大块饱和色 + 大号无衬线 + 半调网点 + 硬投影 | 知识解释、新闻拆解 |
+| `clay` 黏土立体 | 淡紫灰底 + 圆角厚块 + 上亮下暗渐变 + 内高光 + 落地投影 | 产品发布、SaaS、年轻品牌 |
+
+`--theme` 也吃中文名（`--theme=水墨` / `--theme=水彩`）。**14 个模板已经全部接上** ——
+换的不只是配色，背景整层会换成该风格的纸纹 / 网点 / 格网 / 透视地面：
+
+```bash
+bash assets/render.sh assets/templates/bar-chart.html --theme=blueprint --duration=6
+bash assets/render.sh assets/templates/explainer.html --theme=riso --duration=18
+```
+
+每种风格的签名元素、禁忌、在代码里怎么调、哪个模板配哪种风格，见
+**[assets/STYLES.md](assets/STYLES.md)**。
+
+**先看效果，再决定**：
+
+```bash
+# 十二宫格：第 k 秒一个风格，出 12 张全屏静帧
+node scripts/render-video-seek.js assets/style-gallery.html \
+  --stills=0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5,9.5,10.5,11.5
+
+# 一支 13 秒的风格短片：片头 / 要点 / 数据 / 片尾
+bash assets/render.sh assets/style-film.html --duration=13 --fps=60
+```
+
+**一支完整的多风格推广片**：`assets/examples/promo-zh.html` + `promo-zh.story.json`
+是 12 镜 / 8 风格 / 85 秒的真实案例，镜头表由配音净时长反推，所以解说、字幕、
+画面天然对轴，不用手工卡秒。它演示了两条很实用的做法：每个镜头单独指定
+`shot.style`（一镜一风格，蒙太奇一镜里还能连切四种），以及把字幕画在所有镜头
+之上（转场时不闪、不随风格变色）。
+
+```bash
+node scripts/storyboard.js assets/examples/promo-zh.html \
+  --story=assets/examples/promo-zh.story.json --cols=3
+node scripts/render-video-seek.js assets/examples/promo-zh.html \
+  --story=assets/examples/promo-zh.story.json --duration=85.34 --fps=30 \
+  --audio=voice.wav --out=promo.mp4
+```
+
+## 先看分镜，再渲全片
+
+60 秒 1080p 逐帧渲要 3~10 分钟。渲完才发现「第 4 镜字太小」，改一轮又是几分钟。
+所以先出一页分镜板：
+
+```bash
+node scripts/storyboard.js my.html --cols=3 --theme=riso
+```
+
+```
+my.storyboard/
+├── shot-01.png …        每镜一张中点静帧（在转场窗口之外，画面稳定）
+├── storyboard.html      带镜头名/时长/时间码/转场的一页板
+└── storyboard.png       整页截图，贴给别人问「这样行不行」
+```
+
+十几秒出，能看出：镜头时长分配、层级大小、有没有哪一镜是空的、风格跟内容搭不搭。
+看不出动效手感与转场顺不顺 —— 那些要出片或 `--stills` 抽帧连看。
+
 ## 安装
 
 需要 Node.js >= 18。
@@ -394,6 +494,10 @@ bash assets/qa.sh my-animation.html --duration=12 --fps=30
 | `--concurrency` | 并行 worker 数（每个 worker 一个 Chromium 页面）；给 `auto` 按 CPU 与内存自己挑 |
 | `--audio=<file>` | 编码后自动混音；没给 `--duration` 时按音频长度出片 |
 | `--audio-fit=trim\|pad` | 音画长度不一致：`trim` 按音轨收尾（默认）／`pad` 补静音保住视频长度 |
+| `--beats` / `--beats=<json>` | 分析 `--audio` 的拍点（或用预计算文件），注入 `window.__beats` |
+| `--snap=beats` | 总时长吸到下一个拍点 |
+| `--snap-shots` | 镜头表里每个镜头的时长量化到整拍（真正让切点落在拍上） |
+| `--bpm=<数>` / `--offset=<秒>` | 跳过自动估计，手工给 BPM / 首拍（纯配音想硬卡点时用） |
 | `--gop=<秒>` | 关键帧间隔（`--gop=1` 便于后期按秒 seek） |
 | `--keep-frames` | 成功也保留逐帧 PNG（换 CRF 重编码不必重截） |
 | `--tmpdir=<目录>` | 逐帧 PNG 落到哪块盘（默认挨着 HTML）。1080p 一分钟约 2.4 GB，系统盘紧张时指到别的盘 |
@@ -453,6 +557,48 @@ node scripts/render-video-seek.js animation.html --fps=60 --duration=30 --resume
 
 渲染开头会打印这个地址，排障时直接粘到浏览器里看控制台最方便。
 服务器起不来会自动退回 `file://` 并提示（只警告，不判失败）。
+
+## 一条命令上手：`h2v`
+
+脚本很多（渲染 / 分析 / 分镜 / 验收），记路径和参数很烦。装好依赖后有一个统一入口：
+
+```bash
+npx html-to-video doctor                     # 环境自检：缺什么、怎么修（只读不改）
+npx html-to-video templates                  # 列出 14 个模板
+npx html-to-video styles                     # 列出 12 种风格
+npx html-to-video new my-video --template=quote-card
+npx html-to-video preview my-video.html --duration=6 --open
+npx html-to-video render my-video.html --duration=6 --fps=60
+```
+
+它只是把子命令映射到脚本、参数原样透传 —— 和直接 `node scripts/...` 完全等价。
+
+### 改版式不用等渲染：拖时间轴预览
+
+逐帧渲染最反直觉的是"改一句文案要等几分钟才看到效果"，但页面本身暴露了
+`window.__seek(t)`。`preview` 就是把它当时间机器用：
+
+```bash
+npx html-to-video preview my-video.html --duration=6 --fps=60
+# ▸ http://127.0.0.1:41234/tmp/h2v-preview-....html
+```
+
+空格播放 / ←→ 单帧步进 / 拖时间轴，看到的每一帧就是渲染器将要截到的画面。
+竖屏项目加 `--size=1080x1920`，否则预览框是横的、排版按 16:9 算，容易误判。
+
+### 跑不起来先跑 doctor
+
+```
+✓ Node.js          22.13.1
+✓ Playwright       1.58.0 · ~/.cache/ms-playwright/chromium-1208/...
+✓ Chromium 启动      无头模式可启动
+✓ ffmpeg           .../linux-x64/ffmpeg · 含 libx264 + ProRes
+⚠ 中文字体            没检测到中文字体，成片里的汉字会变方块
+    → apt-get install -y fonts-noto-cjk
+```
+
+三类最常见的失败（Playwright 版本与浏览器缓存不匹配、ffmpeg 缺 H.264、缺中文字体）
+都能一次看出来，并给出可执行的修法。加 `--json` 给 CI / Agent 用。
 
 ## 动画要满足的契约
 
@@ -619,8 +765,12 @@ html-to-video/
 ├── CHANGELOG.md                   更新日志与版本号规则
 ├── package.json                   可 npm install；engines: node >= 18
 ├── CONTRIBUTING.md                贡献指南（加模板的四条硬约定在这里）
+├── bin/h2v.js                     统一命令入口（render / preview / beats / doctor / styles …）
 ├── scripts/
 │   ├── render-video-seek.js       渲染器内核：冻结时钟 + 逐帧 seek + ffmpeg 编码 + 报错判定
+│   ├── beats.js                   节拍分析：ffmpeg 解码 → 能量通量 → 自相关 → 相位对齐
+│   ├── preview.js                 浏览器预览服务器（拖时间轴，调 iframe 的 __seek）
+│   ├── doctor.js                  环境自检：Node / Playwright / ffmpeg / 字体 / 磁盘
 │   ├── qa.js                      自动化验收：确定性/动感/流畅/框景/字体/报错
 │   ├── bench.js                   性能基线：量 s/帧，产出 bench/bench.md
 │   ├── lib/hide-chrome.cjs        隐藏播放控件的共享规则（渲染器与验收器同一份）
@@ -644,11 +794,15 @@ html-to-video/
 │   ├── qa-dom-text.test.mjs       DOM 文字按行分块，多行段落不误报
 │   ├── qa-rules.test.mjs          判据纯函数的单测
 │   ├── templates-contract.test.mjs 模板契约 + 能力登记表双向校验
-│   └── fixtures/                  对照组页面（broken / offscreen-text / dom-text）
+│   ├── beats.test.mjs             节拍：BPM / 拍距 / 相位 / 无节拍音频 / 静音
+│   ├── render-beats.test.mjs      --beats 注入时机、--snap 吸附、错误参数明确失败
+│   ├── cli.test.mjs               h2v 子命令 / new 拷贝依赖 / doctor --json
+│   ├── preview.test.mjs           预览服务器可访问、注入 __seekRender、清理临时副本
+│   └── fixtures/                  对照组页面（broken / offscreen-text / dom-text / beats-probe）
 ├── .github/workflows/ci.yml       PR 自动跑 npm test
 ├── docs/                          README 里用的演示动图 / 原片 / 静帧
 │   ├── demo-hero.html             首页那支 10 秒演示片的源文件（447 行，零依赖）
-│   ├── demo-*.gif / demo-*.mp4    11 个模板的演示动图与原片
+│   ├── demo-*.gif / demo-*.mp4    模板的演示动图与原片
 │   ├── explainer-shots.csv        讲解片那支的镜头时间轴（--scene-log 导出）
 │   └── preview-*.png              静帧大图
 └── assets/
@@ -661,7 +815,7 @@ html-to-video/
     ├── lib/camera.js              运镜（推拉/呼吸/手持/震动）
     ├── lib/shapes.js              40+ 图标 + 卡片/箭头/连接线/背景纹理
     ├── lib/figures.js             参数化人物 + 对话气泡
-    └── templates/                 11 个开箱即用模板
+    └── templates/                 14 个开箱即用模板
         ├── themes.js              三套内置主题（midnight / paper / neon）
         ├── explainer.html         多镜头讲解片（人物 / 图标 / 转场 / 字幕）
         ├── title-card.html        片头标题卡
@@ -671,6 +825,9 @@ html-to-video/
         ├── timeline.html          时间线 / 流程
         ├── vertical-card.html     竖屏 9:16 卡片
         ├── compare.html           前后对比
+        ├── quote-card.html        引言卡 / 金句
+        ├── chapter-card.html      章节卡 / 过渡页
+        ├── ui-showcase.html       界面演示（聚光 + 标注）
         ├── flow-steps.html        流程图动画
         ├── subtitle-card.html     逐句解说卡
         └── vertical-subtitle.html 竖屏字幕卡（关键词高亮）
@@ -680,7 +837,7 @@ html-to-video/
 
 ```bash
 npm install          # 装 playwright（ffmpeg 见上面「安装」，必须是完整版）
-npm test             # 109 个用例，约 2 分钟
+npm test             # 99 个用例，约 2 分钟
 npm run bench        # 量本机渲染速度 → bench/bench.md
 ```
 
