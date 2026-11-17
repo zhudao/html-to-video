@@ -16,7 +16,7 @@
  *   npx html-to-video preview demo.html --duration=6 --open
  *   npx html-to-video storyboard demo.html --duration=24
  *   npx html-to-video doctor
- *   npx html-to-video styles            # 列出 12 种视觉风格
+ *   npx html-to-video styles            # 列出视觉风格（按家族分组）
  *   npx html-to-video templates         # 列出 14 个版式模板
  *   npx html-to-video new my-video      # 拷一个模板出来改
  */
@@ -50,6 +50,10 @@ html-to-video v${version()} · 用代码逐帧做视频
   h2v preview <file.html> [选项]     浏览器里拖时间轴预览（不用等渲染）
   h2v beats <audio> [选项]           分析 BPM / 拍点，产出 beats.json
   h2v storyboard <file.html> [选项]  先出一页分镜板，再决定要不要渲全片
+  h2v check <story.json>             文案自检（字数/单行/陈词滥调/转折）
+  h2v qc <file.mp4>                  成片质检（首帧运动/重复帧/冻结/黑场/响度/缩略图）
+  h2v master <file.mp4>              响度母版：-14 LUFS，真峰值 ≤ -1 dBTP
+  h2v camera                         列出 12 种镜头语言
   h2v doctor                         环境自检（缺什么、怎么修）
   h2v styles                         列出视觉风格（--theme= 的值）
   h2v templates                      列出模板（可直接改字出片）
@@ -60,6 +64,7 @@ html-to-video v${version()} · 用代码逐帧做视频
   --theme=ink            换视觉语言（12 种，见 h2v styles）
   --preset=douyin        按平台定尺寸；--presets=douyin,xiaohongshu 出全套
   --audio=bgm.mp3 --beats --snap=beats    自动卡点
+  --camera=dolly-in,3s   镜头运动（auto | off | 一行 camera line，见 h2v camera）
   --story=shots.json     用 JSON 换掉整份镜头表
   --json                 给 Agent 用：stdout 只有一行结果 JSON
 
@@ -92,13 +97,67 @@ switch (cmd) {
     run('doctor.js', argv.slice(1));
     break;
 
+  case 'qc': case 'q':
+    if (!argv[1]) { usage(); process.exit(1); }
+    run('qc.js', argv.slice(1));
+    break;
+
+  /* 母版：抽出音频 → 两遍线性归一 → 重新封装（视频流 copy，不重编）
+     默认写到 <名字>.mastered.mp4；--out= 可指定 */
+  case 'master': case 'm': {
+    if (!argv[1]) { usage(); process.exit(1); }
+    const src = argv[1];
+    const rest = argv.slice(2);
+    const outArg = rest.find((a) => a.startsWith('--out='));
+    const out = outArg ? outArg.split('=')[1] : src.replace(/(\.[^.\\/]+)$/, '.mastered$1');
+    const pass = rest.filter((a) => !a.startsWith('--out='));
+    run('audio-master.js', [src, out, '--video=' + src, ...pass]);
+    break;
+  }
+
+  case 'check': case 'c':
+    if (!argv[1]) { usage(); process.exit(1); }
+    run('script-check.js', argv.slice(1));
+    break;
+
+  case 'camera': case 'cam': {
+    const CAM = require(path.join(ROOT, 'assets', 'lib', 'camera.js'));
+    console.log('\n镜头语言（--camera=<名字>，或写进 CFG.camera / shot.camera）：\n');
+    for (const c of CAM.list()) {
+      console.log(`  ${c.id.padEnd(12)} ${c.cn.padEnd(7)} ${c.en.padEnd(19)} ${(c.dur ? c.dur + 's' : '全程').padEnd(5)} ${c.feel}`);
+    }
+    console.log('\n写法  --camera="dolly in, 3s, slow ease-in-out"   --camera=auto   --camera=off');
+    console.log('分镜里逐镜指定：{"id":"hook","dur":3,"camera":"dolly in, 3s"}\n');
+    break;
+  }
+
   case 'styles': {
     // 只读注册表，不画图 —— 所以 node 里也能列（不需要 document）
     const SV = require(path.join(ROOT, 'assets', 'lib', 'styles.js'));
-    console.log('\n视觉风格（--theme=<id> 或中文名都行）：\n');
-    for (const s of SV.list()) {
+    /* 按家族分组打印：14 个名字平铺着看太费劲，先想「要哪一类」再挑，
+       比背 id 实际。--cat= 能过滤一类（中英文都行）。 */
+    const ci = argv.findIndex((a) => a === '--cat' || a.indexOf('--cat=') === 0);
+    const only = ci < 0 ? '' : (argv[ci].indexOf('=') > 0 ? argv[ci].split('=')[1] : (argv[ci + 1] || '')).trim();
+    let rows = SV.list(only ? { cat: only } : undefined);
+    if (only && !rows.length) {
+      console.log(`\n没有「${only}」这一类。可用：${[...new Set(SV.list().map((s) => s.cat))].join(' / ')}\n`);
+      break;
+    }
+    /* SV.list() 给的是定义顺序，不按类排。分组打印必须先排序，
+       否则同一个类名会重复出现好几次（riso/first, 然后 blueprint 又开一个【信息图】）。 */
+    const CATS = ['印刷', '手作', '绘画', '信息图', '数字界面'];
+    rows = rows.slice().sort((a, b) => {
+      const ai = CATS.indexOf(a.cat), bi = CATS.indexOf(b.cat);
+      return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+    });
+
+    console.log('\n视觉风格（--theme=<id> 或中文名都行）：');
+    let last = '';
+    for (const s of rows) {
+      if (s.cat !== last) { console.log(`\n  【${s.cat}】`); last = s.cat; }
       console.log(`  ${s.id.padEnd(12)} ${s.cn.padEnd(8)} ${s.en.padEnd(16)} ${s.tags.join(' / ')}`);
     }
+    console.log(`\n共 ${rows.length} 种。--cat=印刷 / 手作 / 绘画 / 信息图 / 数字界面 只列一类`);
     console.log('\n挑风格：node scripts/render-video-seek.js assets/style-gallery.html --stills=0.5,1.5,...');
     console.log('细节：assets/STYLES.md\n');
     break;
@@ -143,8 +202,23 @@ switch (cmd) {
     const outThemes = path.join(path.dirname(out), 'themes.js');
     if (!fs.existsSync(outThemes)) fs.copyFileSync(themes, outThemes);
 
+    /* 模板里写的是 ../lib/camera.js（在 assets/templates/ 下正好指向 assets/lib/）。
+       拷到用户目录后 ../lib 会落到项目外面 —— 所以改写成本目录 ./lib/，
+       并把 camera.js 一起拷过去。少这一步，模板会在加载时 404，
+       而渲染器把"页面报错"判为失败，用户看到的是"渲染失败"。 */
+    const camSrc = path.join(srcDir, '..', 'lib', 'camera.js');
+    if (fs.existsSync(camSrc)) {
+      const libDir = path.join(path.dirname(out), 'lib');
+      fs.mkdirSync(libDir, { recursive: true });
+      const camDst = path.join(libDir, 'camera.js');
+      if (!fs.existsSync(camDst)) fs.copyFileSync(camSrc, camDst);
+      const html = fs.readFileSync(out, 'utf8');
+      const fixed = html.replace('\.\.\/lib\/camera\.js', './lib/camera.js');
+      if (fixed !== html) fs.writeFileSync(out, fixed, 'utf8');
+    }
+
     console.log(`✓ 已创建 ${outName}（来自 ${tpl}）`);
-    console.log(`  同目录一起拷了 themes.js（换配色要用）`);
+    console.log(`  同目录一起拷了 themes.js（换配色要用）与 lib/camera.js（镜头运动）`);
     console.log(`  下一步：改文件顶部的 CFG，然后  h2v preview ${outName} --duration=6`);
     break;
   }
