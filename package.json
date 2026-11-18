@@ -1,11 +1,10 @@
 {
   "name": "html-to-video",
-  "version": "1.9.0",
-  "description": "Render HTML/Canvas animations to MP4 frame by frame — deterministic, frame-accurate, no GPU. 14 visual styles + 14 templates + beat-synced cuts + camera language + QC + loudness master. · 用代码逐帧做视频：HTML / Canvas → MP4 / GIF / 透明层",
+  "version": "2.1.0",
+  "description": "16 templates + 14 visual styles + 2.5D space + solids/lighting shading + camera language + beat-synced cuts + procedural foley + QC + loudness master.",
   "keywords": [
     "html-to-video",
     "html-to-mp4",
-    "programmatic-video",
     "multi-scene",
     "kinetic-typography",
     "video-rendering",
@@ -17,7 +16,13 @@
     "deterministic",
     "beat-sync",
     "storyboard",
-    "agent-skill"
+    "agent-skill",
+    "3d",
+    "software-renderer",
+    "shading",
+    "procedural-audio",
+    "foley",
+    "camera-language"
   ],
   "license": "MIT",
   "author": "wx4766",
@@ -44,7 +49,8 @@
     "master": "node scripts/audio-master.js",
     "check": "node scripts/script-check.js",
     "doctor": "node scripts/doctor.js",
-    "preview": "node scripts/preview.js"
+    "preview": "node scripts/preview.js",
+    "foley": "node scripts/foley.js"
   },
   "devDependencies": {
     "playwright": "^1.49.1"
@@ -55,7 +61,14 @@
   },
   "files": [
     "bin/",
-    "assets/",
+    "assets/lib/",
+    "assets/templates/*.html",
+    "assets/templates/*.js",
+    "assets/examples/",
+    "assets/*.html",
+    "assets/*.sh",
+    "assets/*.cjs",
+    "assets/*.md",
     "scripts/",
     "SKILL.md",
     "README.md",
